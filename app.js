@@ -81,7 +81,7 @@ const TABS=[['home','Início','home'],['evo','Evolução','camera'],['cmp','Comp
 let tab='home',prevIdx=0;
 $('#tabs').innerHTML='<span class="blob"></span>'+TABS.map(([k,l,i])=>`<button data-t="${k}" aria-label="${l}">${ic(i)}<span>${l}</span></button>`).join('');
 $$('#tabs button').forEach(b=>b.onclick=()=>{haptic();go(b.dataset.t)});
-function placeBlob(){const b=$(`#tabs button[data-t="${tab}"]`),bl=$('#tabs .blob');bl.style.left=b.offsetLeft+'px';bl.style.width=b.offsetWidth+'px'}
+function placeBlob(){const b=$(`#tabs button[data-t="${tab}"]`),bl=$('#tabs .blob'),v=matchMedia('(min-width:1000px)').matches;bl.style.left=b.offsetLeft+'px';bl.style.width=b.offsetWidth+'px';bl.style.top=v?b.offsetTop+'px':'';bl.style.height=v?b.offsetHeight+'px':''}
 async function go(k,dir){const i=TABS.findIndex(t=>t[0]===k);dir=dir||(i>prevIdx?'r':i<prevIdx?'l':'u');prevIdx=i;tab=k;
  $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===k));placeBlob();
  await ({home:renderHome,evo:renderEvo,cmp:renderCmp,rot:renderRot})[k]();
@@ -127,8 +127,8 @@ async function renderEvo(){const mt=meta()[evoM]||{},ks=await keys(),ms=await mo
  const setM=m=>{evoM=m;haptic();rerender()};
  $('#mP').onclick=()=>setM(addM(evoM,-1));$('#mN').onclick=()=>{if(evoM<curM())setM(addM(evoM,1))};$('#mPick').onchange=e=>e.target.value&&setM(e.target.value);
  $$('.slot input').forEach(i=>i.onchange=async()=>{const f=i.files[0];if(!f)return;const k=evoM+'|'+i.dataset.pose,sl=i.closest('.slot');sl.classList.add('loading');
-  try{await pPut(k,await compress(f));dropURL(k);bust();syncSoon();haptic(15);toast(`${i.dataset.pose} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
- $$('[data-del]').forEach(b=>b.onclick=async e=>{e.preventDefault();e.stopPropagation();if(!confirm('Remover esta foto?'))return;const k=evoM+'|'+b.dataset.del;await pDel(k);dropURL(k);bust();syncSoon();rerender()});
+  try{await pPut(k,await compress(f));dropURL(k);bust();window.phMark&&phMark(k);syncSoon();haptic(15);toast(`${i.dataset.pose} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
+ $$('[data-del]').forEach(b=>b.onclick=async e=>{e.preventDefault();e.stopPropagation();if(!confirm('Remover esta foto?'))return;const k=evoM+'|'+b.dataset.del;await pDel(k);dropURL(k);bust();window.phMark&&phMark(k,true);syncSoon();rerender()});
  const sv=()=>{const m=meta(),o={peso:$('#peso').value.trim(),notas:$('#notas').value.trim()};if(o.peso||o.notas)m[evoM]=o;else delete m[evoM];LS.set('me_meta',m)};$('#peso').onchange=sv;$('#notas').onchange=sv;
  bindSeg('pT',v=>{evoPose=v;LS.set('me_pose',v);rerender()});
  $$('.tlc').forEach(c=>c.onclick=()=>{evoM=c.dataset.m;haptic();go('evo','u')});
@@ -201,11 +201,12 @@ function confetti(){const c=document.createElement('canvas');c.className='confet
 const b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
 function openSettings(){const p=prof();sheet(`<div class="disp" style="font-size:28px;margin-bottom:16px">Ajustes</div>
  <label class="f">Seu nome</label><input id="sN" value="${esc(p.name)}" placeholder="Como quer ser chamada?">
- <div class="feat" style="margin-top:18px;background:var(--sage-s);border:0"><div class="ico-b" style="background:var(--surf);color:var(--sage)">${ic('shield')}</div><div><b>Seus dados são só seus</b><div class="t-sm">Fotos e rotina ficam salvas apenas neste iPhone. Faça backup de vez em quando e guarde no Arquivos ou iCloud.</div></div></div>
+ <div class="feat" style="margin-top:18px;background:var(--sage-s);border:0"><div class="ico-b" style="background:var(--surf);color:var(--sage)">${ic('shield')}</div><div><b>Seus dados são só seus</b><div class="t-sm">${window.dataNote?dataNote():'Fotos e rotina ficam salvas neste aparelho.'}</div></div></div>
  <button class="btn full" id="bEx" style="margin-top:16px">${ic('download')}Exportar backup</button>
  <label class="btn full plain" style="margin-top:10px">${ic('upload')}Importar backup<input type="file" id="bIm" accept=".json,application/json" hidden></label>
+ ${window.acctSection?acctSection():''}
  ${notifSection()}
- <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v3</p>`,(s,close)=>{bindNotif(s,close);
+ <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v4</p>`,(s,close)=>{bindNotif(s,close);window.bindAcct&&bindAcct(s,close);
  $('#sN',s).onchange=e=>{LS.set('me_profile',{...prof(),name:e.target.value.trim()});if(tab==='home')rerender()};
  $('#bEx',s).onclick=async()=>{const ks=await pKeys(),ph={};for(const k of ks)ph[k]=await b64(await pGet(k));const data={app:'minha-evolucao',v:2,at:new Date().toISOString(),profile:prof(),meta:meta(),tasks:T(),done:D(),photos:ph};
   const bl=new Blob([JSON.stringify(data)],{type:'application/json'}),name=`minha-evolucao-${today()}.json`,file=new File([bl],name,{type:'application/json'});
@@ -213,7 +214,7 @@ function openSettings(){const p=prof();sheet(`<div class="disp" style="font-size
   const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=name;document.body.append(a);a.click();a.remove();toast('Backup exportado')};
  $('#bIm',s).onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(d.app!=='minha-evolucao')throw 0;if(!confirm('Importar vai substituir os dados atuais. Continuar?'))return;
   if(d.profile)LS.set('me_profile',{...d.profile,onboarded:true});LS.set('me_meta',d.meta||{});LS.set('me_tasks',d.tasks||[]);LS.set('me_done',d.done||{});await tx('readwrite',s=>s.clear());
-  for(const[k,u]of Object.entries(d.photos||{})){await pPut(k,await(await fetch(u)).blob());dropURL(k)}bust();close();toast('Backup restaurado');rerender()}catch{toast('Arquivo de backup inválido')}}})}
+  for(const[k,u]of Object.entries(d.photos||{})){await pPut(k,await(await fetch(u)).blob());dropURL(k)}bust();window.phMarkAll&&phMarkAll(await pKeys());close();toast('Backup restaurado');rerender()}catch{toast('Arquivo de backup inválido')}}})}
 /* ---------- onboarding ---------- */
 function onboarding(){const o=document.createElement('div');o.className='ob';let i=0;
  o.innerHTML=`<div class="pages">
