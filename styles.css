@@ -170,3 +170,7 @@ nav.tabs .blob{position:absolute;top:6px;bottom:6px;border-radius:18px;backgroun
 .week .bar{background:repeating-linear-gradient(0deg,var(--bg2) 0 2px,transparent 2px 6px)}
 .slot .ghost-img{opacity:.32;filter:grayscale(.6) contrast(.9)}
 .hero .t-lg{text-wrap:balance}
+.tgl{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}.tgl:first-child{border:0}
+.tgl input{display:none}.tgl span{width:51px;height:31px;border-radius:99px;background:var(--bg2);position:relative;flex:none;transition:background .25s;box-shadow:inset 0 0 0 1px var(--line)}
+.tgl span:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .3s var(--spring)}
+.tgl input:checked+span{background:var(--sage)}.tgl input:checked+span:after{transform:translateX(20px)}

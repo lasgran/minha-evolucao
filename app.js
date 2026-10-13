@@ -127,8 +127,8 @@ async function renderEvo(){const mt=meta()[evoM]||{},ks=await keys(),ms=await mo
  const setM=m=>{evoM=m;haptic();rerender()};
  $('#mP').onclick=()=>setM(addM(evoM,-1));$('#mN').onclick=()=>{if(evoM<curM())setM(addM(evoM,1))};$('#mPick').onchange=e=>e.target.value&&setM(e.target.value);
  $$('.slot input').forEach(i=>i.onchange=async()=>{const f=i.files[0];if(!f)return;const k=evoM+'|'+i.dataset.pose,sl=i.closest('.slot');sl.classList.add('loading');
-  try{await pPut(k,await compress(f));dropURL(k);bust();haptic(15);toast(`${i.dataset.pose} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
- $$('[data-del]').forEach(b=>b.onclick=async e=>{e.preventDefault();e.stopPropagation();if(!confirm('Remover esta foto?'))return;const k=evoM+'|'+b.dataset.del;await pDel(k);dropURL(k);bust();rerender()});
+  try{await pPut(k,await compress(f));dropURL(k);bust();syncSoon();haptic(15);toast(`${i.dataset.pose} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
+ $$('[data-del]').forEach(b=>b.onclick=async e=>{e.preventDefault();e.stopPropagation();if(!confirm('Remover esta foto?'))return;const k=evoM+'|'+b.dataset.del;await pDel(k);dropURL(k);bust();syncSoon();rerender()});
  const sv=()=>{const m=meta(),o={peso:$('#peso').value.trim(),notas:$('#notas').value.trim()};if(o.peso||o.notas)m[evoM]=o;else delete m[evoM];LS.set('me_meta',m)};$('#peso').onchange=sv;$('#notas').onchange=sv;
  bindSeg('pT',v=>{evoPose=v;LS.set('me_pose',v);rerender()});
  $$('.tlc').forEach(c=>c.onclick=()=>{evoM=c.dataset.m;haptic();go('evo','u')});
@@ -204,7 +204,8 @@ function openSettings(){const p=prof();sheet(`<div class="disp" style="font-size
  <div class="feat" style="margin-top:18px;background:var(--sage-s);border:0"><div class="ico-b" style="background:var(--surf);color:var(--sage)">${ic('shield')}</div><div><b>Seus dados são só seus</b><div class="t-sm">Fotos e rotina ficam salvas apenas neste iPhone. Faça backup de vez em quando e guarde no Arquivos ou iCloud.</div></div></div>
  <button class="btn full" id="bEx" style="margin-top:16px">${ic('download')}Exportar backup</button>
  <label class="btn full plain" style="margin-top:10px">${ic('upload')}Importar backup<input type="file" id="bIm" accept=".json,application/json" hidden></label>
- <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v2</p>`,(s,close)=>{
+ ${notifSection()}
+ <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v3</p>`,(s,close)=>{bindNotif(s,close);
  $('#sN',s).onchange=e=>{LS.set('me_profile',{...prof(),name:e.target.value.trim()});if(tab==='home')rerender()};
  $('#bEx',s).onclick=async()=>{const ks=await pKeys(),ph={};for(const k of ks)ph[k]=await b64(await pGet(k));const data={app:'minha-evolucao',v:2,at:new Date().toISOString(),profile:prof(),meta:meta(),tasks:T(),done:D(),photos:ph};
   const bl=new Blob([JSON.stringify(data)],{type:'application/json'}),name=`minha-evolucao-${today()}.json`,file=new File([bl],name,{type:'application/json'});
@@ -231,4 +232,4 @@ addEventListener('resize',()=>{placeBlob();placePills()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&rotD!==today()&&tab!=='rot')rotD=today();if(!document.hidden)rerender()});
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
-(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{go('home','u');if(!prof().onboarded)onboarding()});
+setTimeout(()=>window.syncSoon&&syncSoon(500),2500);(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{go('home','u');if(!prof().onboarded)onboarding()});
