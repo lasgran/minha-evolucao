@@ -203,3 +203,7 @@ input.code{font-family:var(--f-disp);font-size:30px;letter-spacing:.45em;text-al
 }
 @media(hover:hover){.card.press:hover,.tlc:hover{box-shadow:var(--sh2)}.btn:hover{filter:brightness(1.04)}nav.tabs button:hover{color:var(--rose)}}
 @media(min-width:1000px){#hPh{aspect-ratio:auto!important;height:420px}}
+
+.seg .kc{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:700;background:var(--rose-s);color:var(--rose);vertical-align:1px}
+.seg .kc.ok{background:var(--sage-s);color:var(--sage)}
+.slot .sil.hair{inset:10% 12% 16%;width:76%;height:74%;color:var(--plum)}

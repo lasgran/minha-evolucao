@@ -32,7 +32,7 @@ async function syncNow(){if(!logged()||!navigator.onLine)return;if(busy){again=t
   for(const k of lk){const s=d.ph[k];if(!ph[k]||ph[k].del)ph[k]={ts:(s&&!s.del&&first)?0:first?now:(ph[k]&&!ph[k].del?ph[k].ts:now)};
    const lt=ph[k].ts;
    if(s&&s.ts>=lt){if(s.del){await pDel(k);dropURL(k);delete ph[k];changed=true}else if(s.ts>lt){await pPut(k,await aReq('GET','/data/photo?k='+encodeURIComponent(k),null,'blob'));dropURL(k);ph[k]={ts:s.ts};changed=true}}
-   else{const b=await pGet(k);if(b){await aReq('PUT','/data/photo?k='+encodeURIComponent(k)+'&ts='+lt,b,true)}}}
+   else{const b=await pGet(k);if(b){try{await aReq('PUT','/data/photo?k='+encodeURIComponent(k)+'&ts='+lt,b,true)}catch(e){if(e.status===401)throw e}}}}
   for(const[k,s]of Object.entries(d.ph)){if(lk.has(k))continue;const l=ph[k];
    if(l&&l.del&&l.ts>s.ts){if(!s.del)up.ph[k]={ts:l.ts,del:true}}
    else if(!s.del&&s.ts>(l?l.ts:0)){await pPut(k,await aReq('GET','/data/photo?k='+encodeURIComponent(k),null,'blob'));dropURL(k);ph[k]={ts:s.ts};changed=true}

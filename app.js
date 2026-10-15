@@ -1,6 +1,8 @@
 'use strict';
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)],V=$('#view');
-const POSES=['Frente','Lado','Costas'];
+const POSES=['Frente','Lado','Costas'],KINDS=[['Corpo','Corpo'],['Cabelo','Cabelo']];
+/* chaves: corpo = 'AAAA-MM|Frente' (formato antigo, sem migração); cabelo = 'AAAA-MM|Cabelo-Frente' */
+const pk=(c,p)=>c==='Cabelo'?'Cabelo-'+p:p,pLab=x=>x.startsWith('Cabelo-')?'Cabelo · '+x.slice(7):x,ALLP=KINDS.flatMap(([c])=>POSES.map(p=>pk(c,p)));
 const SECS=[['manha','Manhã','sun'],['tarde','Tarde','sunset'],['noite','Noite','moon']];
 const CATS={saude:['Saúde','drop','#5CA8D6','var(--sky-s)'],treino:['Treino','dumbbell','#F2A579','var(--peach-s)'],beleza:['Beleza','sparkle','#D9668A','var(--rose-s)'],alimento:['Alimentação','leaf','#5FB38C','var(--sage-s)'],mente:['Mente','heart','#8A6AD6','var(--plum-s)'],outros:['Outros','tag','#E9B44C','var(--sun-s)']};
 const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'],MESL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -37,7 +39,10 @@ const ic=(n,c='')=>`<svg class="i ${c}" viewBox="0 0 24 24">${P[n]||''}</svg>`;
 const SIL={Frente:'<ellipse cx="50" cy="22" rx="12" ry="15"/><path d="M50 40c-12 0-20 4-23 10l-8 45 6 2 9-34 1 38-3 89h12l4-75h4l4 75h12l-3-89 1-38 9 34 6-2-8-45c-3-6-11-10-23-10z"/>',
 Lado:'<ellipse cx="52" cy="22" rx="11" ry="15"/><path d="M50 40c-7 0-11 5-11 13l1 46 2 2-1 89h12l3-80 4-30c1-12-1-24-4-30 3 12 1 22-1 30l-1-38c0-2-2-2-4-2z"/>',
 Costas:'<ellipse cx="50" cy="22" rx="12" ry="15"/><path d="M50 40c-12 0-20 4-23 10l-8 45 6 2 9-34 1 38-3 89h12l4-75h4l4 75h12l-3-89 1-38 9 34 6-2-8-45c-3-6-11-10-23-10z"/><path d="M50 44v52"/>'};
-const sil=p=>`<svg class="sil" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${SIL[p]}</svg>`;
+const SILH={Frente:'<ellipse cx="50" cy="78" rx="21" ry="27"/><path d="M27 82c-6-30 4-52 23-52s29 22 23 52c4 20 6 42 2 62M27 82c-4 20-6 42-2 62"/><path d="M38 104c0 12 4 22 12 26 8-4 12-14 12-26M18 172c4-18 16-26 32-28 16 2 28 10 32 28"/>',
+Lado:'<path d="M60 52c-12-4-28 2-30 22-1 10 2 18 6 22l-2 10 6 2c0 6 2 10 8 10h6l2 12"/><path d="M60 52c14 4 22 18 20 36-2 22-4 42 2 62-10 2-18-4-22-12"/><path d="M22 176c6-16 16-24 32-26 14 2 24 8 30 24"/>',
+Costas:'<path d="M50 30c-20 0-30 20-26 52 2 22 0 44-4 64 10 6 20 8 30 8s20-2 30-8c-4-20-6-42-4-64 4-32-6-52-26-52z"/><path d="M50 40v108M40 60c-2 20-2 50 0 84M60 60c2 20 2 50 0 84"/><path d="M18 176c4-14 12-20 22-22M82 176c-4-14-12-20-22-22"/>'};
+const sil=p=>{const h=p.startsWith('Cabelo-'),q=h?p.slice(7):p;return`<svg class="sil${h?' hair':''}" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">${(h?SILH:SIL)[q]}</svg>`};
 /* illustrations */
 const ILL={
 photo:`<svg class="ill float" viewBox="0 0 160 130"><defs><linearGradient id="ia" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7C3D2"/><stop offset="1" stop-color="#D7C8F6"/></linearGradient></defs><ellipse cx="80" cy="120" rx="48" ry="6" fill="#C46FB6" opacity=".12"/><rect x="30" y="22" width="62" height="84" rx="14" fill="url(#ia)" transform="rotate(-8 61 64)"/><rect x="66" y="18" width="62" height="84" rx="14" fill="#fff" stroke="#F2B8C8" stroke-width="2" transform="rotate(7 97 60)"/><g transform="rotate(7 97 60)"><circle cx="97" cy="44" r="9" fill="#F2B8C8"/><path d="M80 90c2-14 9-22 17-22s15 8 17 22" fill="#F2B8C8"/></g><path d="M128 20l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#E9B44C"/><circle cx="26" cy="36" r="4" fill="#8A6AD6" opacity=".5"/></svg>`,
@@ -93,61 +98,63 @@ document.addEventListener('click',e=>{if(e.target.closest('#setB')){haptic();ope
 /* ---------- home ---------- */
 async function renderHome(){const p=prof(),nm=p.name||'',s=dayStat(today()),st=streak(),now=new Date(),hm=pad(now.getHours())+':'+pad(now.getMinutes());
  const dn=new Set(D()[today()]||[]),pend=sortT(tasksFor(today()).filter(t=>!dn.has(t.id)));const nxt=pend.find(t=>t.time&&t.time>=hm)||pend[0];
- const ms=await months(),ks=await keys(),cm=curM(),have=POSES.filter(x=>ks.includes(cm+'|'+x)).length;
- let last=null;for(const m of ms){for(const x of POSES)if(ks.includes(m+'|'+x)){last={m,x};break}if(last)break}
+ const ms=await months(),ks=await keys(),cm=curM(),haveB=POSES.filter(x=>ks.includes(cm+'|'+x)).length,haveH=POSES.filter(x=>ks.includes(cm+'|'+pk('Cabelo',x))).length,have=haveB+haveH,NEED=ALLP.length;
+ let last=null;for(const m of ms){for(const x of ALLP)if(ks.includes(m+'|'+x)){last={m,x};break}if(last)break}
  const lu=last?await pURL(last.m+'|'+last.x):null;
  const dstr=now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
  const msg=s.t===0?'Monte sua rotina pra começar':s.p===1?'Dia completo. Você é demais!':s.p>=.5?'Mais da metade, continua assim':s.n?'Bom começo, bora seguir':'Seu dia te espera';
  V.innerHTML=header(dstr,`${greet()}${nm?`,<br><em>${esc(nm)}</em>`:''}`,`<button class="avatar press" id="setB">${esc((nm||'?')[0].toUpperCase())}</button>`)+`<div class="wrap stag">
  <div class="card hero"><div class="row" style="gap:18px">${ring(s.p,128,12,Math.round(s.p*100)+'%','hoje')}<div class="grow col" style="gap:8px"><div class="t-lg" style="font-family:var(--f-disp);font-size:22px;font-weight:600;line-height:1.15">${msg}</div><div class="t-sm">${s.n} de ${s.t} tarefas</div><div><span class="chip">${ic('flame')}${st} ${st===1?'dia':'dias'} seguidos</span></div></div></div></div>
  <div class="card press" id="hNext" style="cursor:pointer"><div class="row">${nxt?catBox(nxt):`<div class="ico-b" style="background:var(--sage-s);color:var(--sage)">${ic('check')}</div>`}<div class="grow"><div class="t-xs" style="font-weight:700;letter-spacing:.05em;text-transform:uppercase">Próxima tarefa</div><div style="font-weight:700;font-size:16px;margin-top:2px">${nxt?esc(nxt.t):s.t?'Tudo feito por hoje':'Nenhuma tarefa ainda'}</div></div>${nxt&&nxt.time?`<div class="t-sm" style="font-weight:700;color:var(--rose)">${nxt.time}</div>`:''}${ic('chevR')}</div></div>
- ${have<3?`<div class="card press" id="hRem" style="background:linear-gradient(135deg,var(--peach-s),var(--rose-s));cursor:pointer"><div class="row"><div class="ico-b" style="background:var(--surf);color:var(--peach)">${ic('bell')}</div><div class="grow"><div style="font-weight:700">Fotos de ${mName(cm)}</div><div class="t-sm">${have?`Faltam ${3-have} de 3 poses`:'Hora do registro do mês: frente, lado e costas'}</div></div>${ic('chevR')}</div></div>`:''}
- <div class="g2"><div class="card stat press" id="hPh" style="padding:0;aspect-ratio:3/4;margin:0;cursor:pointer">${lu?`<img src="${lu}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div style="position:absolute;left:0;right:0;bottom:0;padding:30px 14px 12px;background:linear-gradient(transparent,rgba(20,8,14,.6));color:#fff"><div class="t-xs" style="color:#fffc;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Última foto</div><b style="font-family:var(--f-disp);font-size:20px">${mShort(last.m)} · ${last.x}</b></div>`:`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--rose);padding:14px;text-align:center">${ic('camera')}<b style="font-size:14px">Sua primeira foto</b><span class="t-xs">Toque para registrar</span></div>`}</div>
+ ${have<NEED?`<div class="card press" id="hRem" style="background:linear-gradient(135deg,var(--peach-s),var(--rose-s));cursor:pointer"><div class="row"><div class="ico-b" style="background:var(--surf);color:var(--peach)">${ic('bell')}</div><div class="grow"><div style="font-weight:700">Fotos de ${mName(cm)}</div><div class="t-sm">${have?`Corpo ${haveB}/3 · Cabelo ${haveH}/3`:'Hora do registro do mês: corpo e cabelo, de frente, lado e costas'}</div></div>${ic('chevR')}</div></div>`:''}
+ <div class="g2"><div class="card stat press" id="hPh" style="padding:0;aspect-ratio:3/4;margin:0;cursor:pointer">${lu?`<img src="${lu}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div style="position:absolute;left:0;right:0;bottom:0;padding:30px 14px 12px;background:linear-gradient(transparent,rgba(20,8,14,.6));color:#fff"><div class="t-xs" style="color:#fffc;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Última foto</div><b style="font-family:var(--f-disp);font-size:20px">${mShort(last.m)} · ${pLab(last.x)}</b></div>`:`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--rose);padding:14px;text-align:center">${ic('camera')}<b style="font-size:14px">Sua primeira foto</b><span class="t-xs">Toque para registrar</span></div>`}</div>
  <div class="col" style="gap:var(--s3)"><div class="card stat" style="margin:0;flex:1"><div class="ico-b" style="background:var(--peach-s);color:var(--peach)">${ic('flame')}</div><div class="v" style="margin-top:10px">${st}</div><div class="t-sm">sequência · recorde ${Math.max(st,bestStreak())}</div></div><div class="card stat" style="margin:0;flex:1"><div class="ico-b" style="background:var(--plum-s);color:var(--plum)">${ic('cal')}</div><div class="v" style="margin-top:10px">${ms.length}</div><div class="t-sm">${ms.length===1?'mês registrado':'meses registrados'}</div></div></div></div>
  <h2 class="sec">Sua semana</h2><div class="card">${weekChart()}</div></div>`;
- $('#hNext').onclick=()=>go('rot');$('#hPh').onclick=()=>go('evo');const r=$('#hRem');if(r)r.onclick=()=>{evoM=cm;go('evo')}}
+ $('#hNext').onclick=()=>go('rot');$('#hPh').onclick=()=>go('evo');const r=$('#hRem');if(r)r.onclick=()=>{evoM=cm;if(haveB===3&&haveH<3){evoCat='Cabelo';LS.set('me_cat',evoCat)}else if(haveB<3&&haveH===3){evoCat='Corpo';LS.set('me_cat',evoCat)}go('evo')}}
 function weekChart(){let h='<div class="week">';for(let i=6;i>=0;i--){const k=addD(today(),-i),s=dayStat(k),d=new Date(k+'T12:00');h+=`<div class="b ${i===0?'today':''}"><div class="bar"><i data-h="${Math.max(s.p*100,s.t?4:0)}%"></i></div><div class="d">${DOW[d.getDay()]}</div></div>`}
  let tot=0,cnt=0;for(let i=0;i<7;i++){const s=dayStat(addD(today(),-i));if(s.t){tot+=s.p;cnt++}}return h+`</div><div class="row between" style="margin-top:12px"><span class="t-sm">Média dos últimos 7 dias</span><b>${cnt?Math.round(tot/cnt*100):0}%</b></div>`}
 const catOf=t=>CATS[t.cat]||CATS.outros;
 const catBox=t=>{const c=catOf(t);return`<div class="catb" style="--c:${c[2]};--cs:${c[3]}">${ic(c[1])}</div>`};
 /* ---------- evolução ---------- */
-let evoM=curM(),evoPose=LS.get('me_pose','Frente');
+let evoM=curM(),evoPose=LS.get('me_pose','Frente'),evoCat=LS.get('me_cat','Corpo');
 async function renderEvo(){const mt=meta()[evoM]||{},ks=await keys(),ms=await months(),prevM=ms.find(m=>m<evoM);
- const slots=await Promise.all(POSES.map(async p=>{const u=await pURL(evoM+'|'+p),g=!u&&prevM?await pURL(prevM+'|'+p):null;
-  return`<label class="slot ${u?'has':'empty'}" data-p="${p}">${u?`<img class="ph" src="${u}" alt="${p}"><button class="x" data-del="${p}" aria-label="Remover">${ic('x')}</button>`:(g?`<img class="ghost-img" src="${g}" alt="">`:sil(p))}<input type="file" accept="image/*" data-pose="${p}" ${u?'disabled':''}><span class="cap">${u?'':ic('plus')}${p}</span></label>`}));
- const tl=ms.length?(await Promise.all(ms.map(async m=>{const u=await pURL(m+'|'+evoPose),w=(meta()[m]||{}).peso;return`<div class="tlc press ${m===evoM?'now':''}" data-m="${m}">${u?`<img src="${u}" alt="">`:`<div class="nop">${ic('image')}</div>`}<div class="meta"><b>${mShort(m)}</b><span>${w?esc(w)+' kg':'&nbsp;'}</span></div></div>`}))).join(''):'';
+ const C=evoCat,prevC=ms.find(m=>m<evoM&&POSES.some(p=>ks.includes(m+'|'+pk(C,p))));
+ const slots=await Promise.all(POSES.map(async p=>{const k=pk(C,p),u=await pURL(evoM+'|'+k),g=!u&&prevC?await pURL(prevC+'|'+k):null;
+  return`<label class="slot ${u?'has':'empty'}" data-p="${k}">${u?`<img class="ph" src="${u}" alt="${pLab(k)}"><button class="x" data-del="${k}" aria-label="Remover">${ic('x')}</button>`:(g?`<img class="ghost-img" src="${g}" alt="">`:sil(k))}<input type="file" accept="image/*" data-pose="${k}" ${u?'disabled':''}><span class="cap">${u?'':ic('plus')}${p}</span></label>`}));
+ const cnt=c=>POSES.filter(p=>ks.includes(evoM+'|'+pk(c,p))).length;
+ const tl=ms.length?(await Promise.all(ms.map(async m=>{const u=await pURL(m+'|'+pk(C,evoPose)),w=(meta()[m]||{}).peso;return`<div class="tlc press ${m===evoM?'now':''}" data-m="${m}">${u?`<img src="${u}" alt="">`:`<div class="nop">${ic('image')}</div>`}<div class="meta"><b>${mShort(m)}</b><span>${w?esc(w)+' kg':'&nbsp;'}</span></div></div>`}))).join(''):'';
  V.innerHTML=header('Fotos mensais','Evolução',setBtn())+`<div class="wrap stag">
- <div class="card"><div class="mnav"><button class="ibtn" id="mP">${ic('chevL')}</button><div class="mlab"><b>${mName(evoM)}</b><span class="t-sm">${evoM.slice(0,4)} · ${POSES.filter(p=>ks.includes(evoM+'|'+p)).length}/3 fotos</span><input type="month" id="mPick" value="${evoM}" max="${curM()}"></div><button class="ibtn" id="mN" ${evoM>=curM()?'disabled style="opacity:.25"':''}>${ic('chevR')}</button></div>
+ <div class="card">${seg('kT',KINDS.map(([v,l])=>[v,`${l}<span class="kc ${cnt(v)===3?'ok':''}">${cnt(v)}/3</span>`]),C)}<div style="height:14px"></div><div class="mnav"><button class="ibtn" id="mP">${ic('chevL')}</button><div class="mlab"><b>${mName(evoM)}</b><span class="t-sm">${evoM.slice(0,4)} · ${cnt('Corpo')+cnt('Cabelo')}/6 fotos</span><input type="month" id="mPick" value="${evoM}" max="${curM()}"></div><button class="ibtn" id="mN" ${evoM>=curM()?'disabled style="opacity:.25"':''}>${ic('chevR')}</button></div>
  <div class="slots">${slots.join('')}</div>
- <p class="t-xs" style="text-align:center;margin:12px 0 0">${prevM?'A foto clarinha é do mês anterior: use de guia pra repetir a pose':'Mesma luz, mesma distância e mesma pose todo mês'}</p>
+ <p class="t-xs" style="text-align:center;margin:12px 0 0">${prevC?'A foto clarinha é do mês anterior: use de guia pra repetir a pose':C==='Cabelo'?'Cabelo solto e seco, mesma luz e mesma distância todo mês':'Mesma luz, mesma distância e mesma pose todo mês'}</p>
  <div class="row" style="margin-top:var(--s4);align-items:flex-start"><div style="width:36%"><label class="f">Peso</label><div style="position:relative"><input id="peso" inputmode="decimal" placeholder="—" value="${esc(mt.peso)}"><span class="t-sm" style="position:absolute;right:12px;top:15px">kg</span></div></div><div class="grow"><label class="f">Notas</label><input id="notas" placeholder="Como se sente?" value="${esc(mt.notas)}"></div></div></div>
- <div class="row between" style="margin:var(--s6) 4px var(--s3)"><h2 class="sec" style="margin:0">Linha do tempo</h2><button class="btn sm soft" id="tips">${ic('camera')}Dicas</button></div>
+ <div class="row between" style="margin:var(--s6) 4px var(--s3)"><h2 class="sec" style="margin:0">Linha do tempo · ${C.toLowerCase()}</h2><button class="btn sm soft" id="tips">${ic('camera')}Dicas</button></div>
  ${seg('pT',POSES.map(p=>[p,p]),evoPose)}<div style="height:12px"></div>
- ${ms.length?`<div class="tl">${tl}</div>`:`<div class="card">${empty('photo','Sua jornada começa aqui','Registre frente, lado e costas. Daqui a um mês você vai amar comparar.')}</div>`}</div>`;
+ ${ms.length?`<div class="tl">${tl}</div>`:`<div class="card">${empty('photo','Sua jornada começa aqui','Registre corpo e cabelo de frente, lado e costas. Daqui a um mês você vai amar comparar.')}</div>`}</div>`;
  const setM=m=>{evoM=m;haptic();rerender()};
  $('#mP').onclick=()=>setM(addM(evoM,-1));$('#mN').onclick=()=>{if(evoM<curM())setM(addM(evoM,1))};$('#mPick').onchange=e=>e.target.value&&setM(e.target.value);
  $$('.slot input').forEach(i=>i.onchange=async()=>{const f=i.files[0];if(!f)return;const k=evoM+'|'+i.dataset.pose,sl=i.closest('.slot');sl.classList.add('loading');
-  try{await pPut(k,await compress(f));dropURL(k);bust();window.phMark&&phMark(k);syncSoon();haptic(15);toast(`${i.dataset.pose} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
+  try{await pPut(k,await compress(f));dropURL(k);bust();window.phMark&&phMark(k);syncSoon();haptic(15);toast(`${pLab(i.dataset.pose)} salva`)}catch{toast('Não deu pra salvar a foto')}rerender()});
  $$('[data-del]').forEach(b=>b.onclick=async e=>{e.preventDefault();e.stopPropagation();if(!confirm('Remover esta foto?'))return;const k=evoM+'|'+b.dataset.del;await pDel(k);dropURL(k);bust();window.phMark&&phMark(k,true);syncSoon();rerender()});
  const sv=()=>{const m=meta(),o={peso:$('#peso').value.trim(),notas:$('#notas').value.trim()};if(o.peso||o.notas)m[evoM]=o;else delete m[evoM];LS.set('me_meta',m)};$('#peso').onchange=sv;$('#notas').onchange=sv;
- bindSeg('pT',v=>{evoPose=v;LS.set('me_pose',v);rerender()});
+ bindSeg('pT',v=>{evoPose=v;LS.set('me_pose',v);rerender()});bindSeg('kT',v=>{evoCat=v;LS.set('me_cat',v);rerender()});
  $$('.tlc').forEach(c=>c.onclick=()=>{evoM=c.dataset.m;haptic();go('evo','u')});
- $('#tips').onclick=()=>sheet(`<div class="disp" style="font-size:26px;margin-bottom:12px">Fotos consistentes</div>${[['sun','Mesma luz','De preferência luz natural, de frente pra janela.'],['user','Mesma distância','Corpo inteiro no quadro, celular na altura do umbigo.'],['clock','Mesmo horário','De manhã, em jejum, é o ideal pra comparar.'],['image','Use o guia','A foto clarinha do mês anterior ajuda a repetir a pose.']].map(([i,t,d])=>`<div class="feat"><div class="ico-b" style="background:var(--rose-s);color:var(--rose)">${ic(i)}</div><div><b>${t}</b><div class="t-sm">${d}</div></div></div>`).join('')}<button class="btn full" style="margin-top:18px" id="ok">Entendi</button>`,(s,c)=>$('#ok',s).onclick=c)}
+ $('#tips').onclick=()=>sheet(`<div class="disp" style="font-size:26px;margin-bottom:12px">${C==='Cabelo'?'Fotos do cabelo':'Fotos consistentes'}</div>${(C==='Cabelo'?[['sun','Mesma luz','Luz natural, de frente pra janela, sem flash.'],['sparkle','Cabelo do mesmo jeito','Solto, seco e penteado igual, de preferência no dia depois da lavagem.'],['user','Mesmo enquadramento','Da cabeça até um pouco abaixo das pontas. Nas costas, peça ajuda ou use o timer.'],['image','Use o guia','A foto clarinha do mês anterior ajuda a repetir a pose.']]:[['sun','Mesma luz','De preferência luz natural, de frente pra janela.'],['user','Mesma distância','Corpo inteiro no quadro, celular na altura do umbigo.'],['clock','Mesmo horário','De manhã, em jejum, é o ideal pra comparar.'],['image','Use o guia','A foto clarinha do mês anterior ajuda a repetir a pose.']]).map(([i,t,d])=>`<div class="feat"><div class="ico-b" style="background:var(--rose-s);color:var(--rose)">${ic(i)}</div><div><b>${t}</b><div class="t-sm">${d}</div></div></div>`).join('')}<button class="btn full" style="margin-top:18px" id="ok">Entendi</button>`,(s,c)=>$('#ok',s).onclick=c)}
 /* ---------- comparar ---------- */
-let cmp=LS.get('me_cmp',{a:null,b:null,p:'Frente',mode:'slider'});
+let cmp={c:'Corpo',...LS.get('me_cmp',{a:null,b:null,p:'Frente',mode:'slider'})};
 async function renderCmp(){const ms=await months();
  if(ms.length<2){V.innerHTML=header('Antes e depois','Comparar',setBtn())+`<div class="wrap"><div class="card">${empty('mirror','Falta um mês','Com fotos de dois meses diferentes você compara aqui, com o deslizador ou lado a lado.',`<button class="btn" id="goE">${ic('camera')}Adicionar fotos</button>`)}</div></div>`;$('#goE').onclick=()=>go('evo');return}
  if(!ms.includes(cmp.a))cmp.a=ms[ms.length-1];if(!ms.includes(cmp.b))cmp.b=ms[0];
  const opt=s=>ms.map(m=>`<option value="${m}" ${m===s?'selected':''}>${mName(m).slice(0,3)} ${m.slice(0,4)}</option>`).join('');
- const ua=await pURL(cmp.a+'|'+cmp.p),ub=await pURL(cmp.b+'|'+cmp.p),ma=meta()[cmp.a]||{},mb=meta()[cmp.b]||{};
+ const ua=await pURL(cmp.a+'|'+pk(cmp.c,cmp.p)),ub=await pURL(cmp.b+'|'+pk(cmp.c,cmp.p)),ma=meta()[cmp.a]||{},mb=meta()[cmp.b]||{};
  const wa=num(ma.peso),wb=num(mb.peso),dw=!isNaN(wa)&&!isNaN(wb)?wb-wa:null;
  const span=(+cmp.b.slice(0,4)-+cmp.a.slice(0,4))*12+(+cmp.b.slice(5)-+cmp.a.slice(5));
- let viz;if(!ua||!ub)viz=empty('photo','Falta uma foto',`Não tem foto de <b>${cmp.p.toLowerCase()}</b> em ${mLabel(!ua?cmp.a:cmp.b)}.`);
+ let viz;if(!ua||!ub)viz=empty('photo','Falta uma foto',`Não tem foto de <b>${cmp.c==='Cabelo'?'cabelo · ':''}${cmp.p.toLowerCase()}</b> em ${mLabel(!ua?cmp.a:cmp.b)}.`);
  else if(cmp.mode==='sbs')viz=`<div class="sbs"><div><img src="${ua}"><span class="tag" style="left:10px">${mShort(cmp.a)}</span></div><div><img src="${ub}"><span class="tag" style="right:10px">${mShort(cmp.b)}</span></div></div>`;
  else viz=`<div class="ba" id="ba"><img src="${ub}" alt=""><img class="top" src="${ua}" alt=""><div class="bar"></div><div class="knob">${ic('arrows')}</div><span class="tag" style="left:12px">${mShort(cmp.a)}</span><span class="tag" style="right:12px">${mShort(cmp.b)}</span></div>`;
  V.innerHTML=header('Antes e depois','Comparar',setBtn())+`<div class="wrap stag">
  <div class="card"><div class="row"><div class="grow"><label class="f">Antes</label><select id="cA">${opt(cmp.a)}</select></div><div style="padding-top:22px;color:var(--tx3)">${ic('chevR')}</div><div class="grow"><label class="f">Depois</label><select id="cB">${opt(cmp.b)}</select></div></div>
- <div style="height:12px"></div>${seg('cP',POSES.map(p=>[p,p]),cmp.p)}</div>
+ <div style="height:12px"></div>${seg('cK',KINDS,cmp.c)}<div style="height:8px"></div>${seg('cP',POSES.map(p=>[p,p]),cmp.p)}</div>
  <div class="card" style="padding:10px">${viz}${ua&&ub?`<div style="height:10px"></div>${seg('cM',[['slider','Deslizar'],['sbs','Lado a lado']],cmp.mode)}`:''}</div>
  <h2 class="sec">Resumo</h2>
  <div class="g2"><div class="card stat" style="margin:0"><div class="ico-b" style="background:var(--sage-s);color:var(--sage)">${ic('scale')}</div><div class="v" style="margin-top:10px">${dw==null?'—':(dw>0?'+':'')+dw.toFixed(1).replace('.',',')}<span class="t-sm"> kg</span></div><div class="t-sm">${dw==null?'Registre o peso nos dois meses':`${esc(ma.peso)} → ${esc(mb.peso)} kg`}</div></div>
@@ -155,7 +162,7 @@ async function renderCmp(){const ms=await months();
  ${ma.notas||mb.notas?`<div class="card" style="margin-top:12px">${[[cmp.a,ma],[cmp.b,mb]].filter(x=>x[1].notas).map(([m,o])=>`<div style="margin:4px 0"><b class="t-sm" style="color:var(--rose)">${mShort(m)}</b><div>${esc(o.notas)}</div></div>`).join('')}</div>`:''}</div>`;
  const save=()=>{LS.set('me_cmp',cmp);rerender()};
  $('#cA').onchange=e=>{cmp.a=e.target.value;save()};$('#cB').onchange=e=>{cmp.b=e.target.value;save()};
- bindSeg('cP',v=>{cmp.p=v;save()});bindSeg('cM',v=>{cmp.mode=v;save()});
+ bindSeg('cP',v=>{cmp.p=v;save()});bindSeg('cK',v=>{cmp.c=v;save()});bindSeg('cM',v=>{cmp.mode=v;save()});
  const ba=$('#ba');if(ba){const set=x=>{const r=ba.getBoundingClientRect(),p=Math.max(0,Math.min(100,(x-r.left)/r.width*100));$('.top',ba).style.clipPath=`inset(0 ${100-p}% 0 0)`;$('.bar',ba).style.left=p+'%';$('.knob',ba).style.left=p+'%'};
   let dn=false;ba.onpointerdown=e=>{dn=true;ba.setPointerCapture(e.pointerId);set(e.clientX);haptic(5)};ba.onpointermove=e=>dn&&set(e.clientX);ba.onpointerup=ba.onpointercancel=()=>dn=false}}
 /* ---------- rotina ---------- */
@@ -206,7 +213,7 @@ function openSettings(){const p=prof();sheet(`<div class="disp" style="font-size
  <label class="btn full plain" style="margin-top:10px">${ic('upload')}Importar backup<input type="file" id="bIm" accept=".json,application/json" hidden></label>
  ${window.acctSection?acctSection():''}
  ${notifSection()}
- <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v4</p>`,(s,close)=>{bindNotif(s,close);window.bindAcct&&bindAcct(s,close);
+ <p class="t-xs" style="text-align:center;margin-top:16px">Minha Evolução · v5</p>`,(s,close)=>{bindNotif(s,close);window.bindAcct&&bindAcct(s,close);
  $('#sN',s).onchange=e=>{LS.set('me_profile',{...prof(),name:e.target.value.trim()});if(tab==='home')rerender()};
  $('#bEx',s).onclick=async()=>{const ks=await pKeys(),ph={};for(const k of ks)ph[k]=await b64(await pGet(k));const data={app:'minha-evolucao',v:2,at:new Date().toISOString(),profile:prof(),meta:meta(),tasks:T(),done:D(),photos:ph};
   const bl=new Blob([JSON.stringify(data)],{type:'application/json'}),name=`minha-evolucao-${today()}.json`,file=new File([bl],name,{type:'application/json'});
@@ -219,7 +226,7 @@ function openSettings(){const p=prof();sheet(`<div class="disp" style="font-size
 function onboarding(){const o=document.createElement('div');o.className='ob';let i=0;
  o.innerHTML=`<div class="pages">
  <div class="pg">${OBART[0]}<div class="eyebrow" style="color:var(--rose)">Bem-vinda</div><h1 class="disp">Minha<br><em style="font-style:italic;color:var(--rose)">Evolução</em></h1><p>Seu cantinho pra acompanhar o corpo e a rotina, com carinho e no seu ritmo.</p></div>
- <div class="pg r">${OBART[1]}<div class="eyebrow" style="color:var(--rose)">Mês a mês</div><h1 class="disp">Veja sua<br><em style="font-style:italic;color:var(--rose)">transformação</em></h1><p>Fotos de frente, lado e costas todo mês, com guia de enquadramento e comparação antes e depois.</p></div>
+ <div class="pg r">${OBART[1]}<div class="eyebrow" style="color:var(--rose)">Mês a mês</div><h1 class="disp">Veja sua<br><em style="font-style:italic;color:var(--rose)">transformação</em></h1><p>Fotos do corpo e do cabelo, de frente, lado e costas todo mês, com guia de enquadramento e comparação antes e depois.</p></div>
  <div class="pg r">${OBART[2]}<div class="eyebrow" style="color:var(--rose)">Quase lá</div><h1 class="disp">Como posso<br><em style="font-style:italic;color:var(--rose)">te chamar?</em></h1><input class="nm" id="obN" placeholder="Seu nome" autocomplete="given-name" maxlength="24"><p class="t-xs" style="text-align:center;font-size:13px">Tudo fica só no seu celular.</p></div>
  </div><div class="dots"><i class="on"></i><i></i><i></i></div><button class="btn full" id="obB">Começar</button><button class="btn full plain" id="obS" style="margin-top:8px;background:none">Pular</button>`;
  document.body.append(o);const pg=$$('.pg',o),dots=$$('.dots i',o),B=$('#obB',o);
